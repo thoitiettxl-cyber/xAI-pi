@@ -90,7 +90,7 @@ Out of scope:
 - [x] Run the deep Codex test matrix and record pass/fail/unproven boundaries.
 - [x] Run the live Grok proof matrix and record pass/fail/unproven boundaries.
 - [x] Add compact `AGENTS.md` and `docs/ARCHITECTURE.md`.
-- [ ] Commit the repository and push to GitHub.
+- [x] Commit the repository and push to GitHub.
 
 ## Decisions
 
@@ -141,4 +141,4 @@ Promote lasting product or architecture decisions into repository-owned decision
 
 ## Result
 
-Implemented and installed the corrected dual-backend `web_search`. Codex and Grok live matrices passed their core cases. Compact `AGENTS.md` now points at `docs/ARCHITECTURE.md` and `README.md`; `docs/ARCHITECTURE.md` maps repository docs and runtime/install flows. Remaining unproven runtime boundaries are unchanged.
+Implemented and installed the corrected dual-backend `web_search`. Codex and Grok live matrices passed their core cases. Compact `AGENTS.md` now points at `docs/ARCHITECTURE.md` and `README.md`; `docs/ARCHITECTURE.md` maps repository docs and runtime/install flows. Initial commit `ea69a23e68b632ce08a897b00084e0dbcb57d532` is on `main` at https://github.com/thoitiettxl-cyber/xAI-pi. Remaining unproven runtime boundaries are unchanged.
