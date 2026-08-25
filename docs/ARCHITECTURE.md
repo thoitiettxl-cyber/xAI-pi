@@ -10,6 +10,7 @@ xAI-pi/
 ├── README.md                 # hợp đồng runtime
 ├── web_search.ts             # tool web_search, dual-backend
 ├── x_search.ts               # tool x_search, xAI trực tiếp
+├── xai-compact.ts            # compact /tree workaround xAI Responses
 └── docs/
     ├── ARCHITECTURE.md       # tài liệu này
     ├── web_search.md         # tài liệu vendor Web Search
@@ -22,7 +23,7 @@ xAI-pi/
     └── plans/active/         # spec và kế hoạch đang mở
 ```
 
-Hai extension cố ý tách rời. Sửa hoặc xóa một file không được làm file kia hết load.
+Ba extension cố ý tách rời. Sửa hoặc xóa một file không được làm file kia hết load.
 
 ## Bản đồ tài liệu
 
@@ -34,6 +35,7 @@ Hai extension cố ý tách rời. Sửa hoặc xóa một file không được 
 | Tham số public / timeout / truncation | `README.md` |
 | Shape API xAI gốc | `docs/web_search.md`, `docs/x_search.md` |
 | Mapping Codex, SSE, lỗi đã chứng minh | `docs/plans/active/web-search-openai-codex-spec.md` |
+| Workaround compact Grok (Pi 0.84.3) | `xai-compact.ts` và `docs/plans/active/xai-compact-workaround-spec.md` |
 | Việc hiện tại, bằng chứng, rollback | `docs/plans/active/*.md` |
 | Ghi chú cache/reasoning Grok | các file `docs/*.md` còn lại — không phải hợp đồng sản phẩm |
 
@@ -49,9 +51,11 @@ flowchart TD
   readme --> which{Tool nao?}
   which -->|web_search| ws[web_search.ts]
   which -->|x_search| xs[x_search.ts]
+  which -->|compact xAI| xc[xai-compact.ts]
   ws --> spec[plans/active Codex spec neu dung backend]
   spec --> check[node --experimental-strip-types --check]
   xs --> check
+  xc --> check
   check --> live{Can live?}
   live -->|Khong| done[Bao cao syntax + review]
   live -->|Co va duoc phep| smoke[Smoke tren dung model]
@@ -67,7 +71,7 @@ flowchart LR
   reload --> runtime[Pi load extension]
 ```
 
-Rollback `web_search` toàn cục: chép lại `/root/.pi/agent/extensions/web_search.ts.bak` rồi `/reload`.
+Rollback `web_search` toàn cục: chép lại `/root/.pi/agent/extensions/web_search.ts.bak` rồi `/reload`. Rollback `xai-compact` toàn cục: xóa `/root/.pi/agent/extensions/xai-compact.ts` rồi `/reload`.
 
 ## Luồng runtime `web_search`
 
@@ -99,6 +103,25 @@ flowchart TD
 
 Giới hạn chung: timeout 120s, body 2 MiB, tối đa 50 citation. Grok và `x_search` gửi trần 8192 output token; Codex từ chối field đó.
 
+## Luồng runtime `xai-compact`
+
+Chỉ khi `ctx.model.provider === "xai"` và `ctx.model.api === "openai-responses"`.
+
+```mermaid
+flowchart TD
+  ev["session_before_compact / session_before_tree"] --> gate{xAI openai-responses?}
+  gate -->|Khong| skip[return void / default Pi]
+  gate -->|Tree va userWantsSummary khac true| skip
+  gate -->|Co| ser["serialize convertToLlm + serializeConversation"]
+  ser --> llm["complete ctx.model, khong tools/toolChoice"]
+  llm -->|text| ret["return compaction hoac summary markdown"]
+  llm -->|abort| cancel["return cancel true"]
+  llm -->|loi / rong / toolCall| mach["summary may: cat transcript"]
+  mach --> ret
+```
+
+Không gọi `POST /v1/responses/compact`. Overflow trên xAI không được `return void`.
+
 ## Luồng runtime `x_search`
 
 Không phụ thuộc model đang chat.
@@ -119,6 +142,7 @@ flowchart TD
 ```sh
 node --experimental-strip-types --check web_search.ts
 node --experimental-strip-types --check x_search.ts
+node --experimental-strip-types --check xai-compact.ts
 ```
 
-Syntax pass không chứng minh hosted search hay citation. Live smoke cần auth ngoài kho và đúng model: Grok + `openai-responses`, hoặc `openai-codex`, hoặc `xai/grok-4.6` cho `x_search`.
+Syntax pass không chứng minh hosted search, citation, hay compact. Live smoke cần auth ngoài kho và đúng model: Grok + `openai-responses`, hoặc `openai-codex`, hoặc `xai/grok-4.6` cho `x_search`. Compact live cần phiên xAI Responses thật và `/compact` hoặc `/tree` summarize.
