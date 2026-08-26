@@ -19,7 +19,7 @@ Kho Pi extension độc lập: `web_search.ts`, `x_search.ts`, `xai-compact.ts`,
 | Spec dual-backend Codex | `docs/plans/active/web-search-openai-codex-spec.md` |
 | Spec compact xAI-only | `docs/plans/active/xai-compact-workaround-spec.md` |
 | Kế hoạch adapter AgentRouter | `docs/plans/active/agentrouter-vietnamese-language-adapter.md` |
-| Việc đang mở | `docs/plans/active/` |
+| Việc đang mở | Kế hoạch trong `docs/plans/active/` còn việc — đọc Status/Result nếu file có. Spec Codex/compact là hợp đồng (hàng Spec), không phải việc mở. |
 | Ghi chú Grok/cache (tham khảo, không phải hợp đồng) | `docs/grok-4.6.md`, `docs/Reasoning.md`, `docs/Maximizing Cache Hits.md`, `docs/What Breaks Caching.md`, `docs/Context Compaction.md` |
 
 ## Ràng buộc ngắn

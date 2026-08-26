@@ -22,7 +22,7 @@ xAI-pi/
     ├── Maximizing Cache Hits.md
     ├── What Breaks Caching.md
     ├── Context Compaction.md
-    └── plans/active/         # spec và kế hoạch đang mở
+    └── plans/active/         # spec hiện hành + kế hoạch; đọc Status/Result nếu file có
 ```
 
 Bốn extension cố ý tách rời. Sửa hoặc xóa một file không được làm file kia hết load; test adapter chỉ import subject under test.
@@ -39,7 +39,7 @@ Bốn extension cố ý tách rời. Sửa hoặc xóa một file không đượ
 | Mapping Codex, SSE, lỗi đã chứng minh | `docs/plans/active/web-search-openai-codex-spec.md` |
 | Workaround compact Grok (Pi 0.84.3) | `xai-compact.ts` và `docs/plans/active/xai-compact-workaround-spec.md` |
 | Adapter tiếng Việt cho AgentRouter | `agentrouter-language-adapter.ts` và `docs/plans/active/agentrouter-vietnamese-language-adapter.md` |
-| Việc hiện tại, bằng chứng, rollback | `docs/plans/active/*.md` |
+| Việc hiện tại, bằng chứng, rollback | Việc hiện tại: kế hoạch còn việc trong `docs/plans/active/` (Status/Result nếu có); Spec Codex/compact không phải việc mở. Bằng chứng/rollback: file tương ứng, kể cả spec. |
 | Ghi chú cache/reasoning Grok | các file `docs/*.md` còn lại — không phải hợp đồng sản phẩm |
 
 Thứ tự ưu tiên khi lệch nhau: code đang chạy → `README.md` → spec trong `docs/plans/active/` → tài liệu vendor → ghi chú tham khảo.
