@@ -11,6 +11,8 @@ xAI-pi/
 ├── web_search.ts             # tool web_search, dual-backend
 ├── x_search.ts               # tool x_search, xAI trực tiếp
 ├── xai-compact.ts            # compact /tree workaround xAI Responses
+├── agentrouter-language-adapter.ts      # Vietnamese → English wire adapter
+├── agentrouter-language-adapter.test.ts # offline policy/hook tests
 └── docs/
     ├── ARCHITECTURE.md       # tài liệu này
     ├── web_search.md         # tài liệu vendor Web Search
@@ -23,7 +25,7 @@ xAI-pi/
     └── plans/active/         # spec và kế hoạch đang mở
 ```
 
-Ba extension cố ý tách rời. Sửa hoặc xóa một file không được làm file kia hết load.
+Bốn extension cố ý tách rời. Sửa hoặc xóa một file không được làm file kia hết load; test adapter chỉ import subject under test.
 
 ## Bản đồ tài liệu
 
@@ -36,6 +38,7 @@ Ba extension cố ý tách rời. Sửa hoặc xóa một file không được l
 | Shape API xAI gốc | `docs/web_search.md`, `docs/x_search.md` |
 | Mapping Codex, SSE, lỗi đã chứng minh | `docs/plans/active/web-search-openai-codex-spec.md` |
 | Workaround compact Grok (Pi 0.84.3) | `xai-compact.ts` và `docs/plans/active/xai-compact-workaround-spec.md` |
+| Adapter tiếng Việt cho AgentRouter | `agentrouter-language-adapter.ts` và `docs/plans/active/agentrouter-vietnamese-language-adapter.md` |
 | Việc hiện tại, bằng chứng, rollback | `docs/plans/active/*.md` |
 | Ghi chú cache/reasoning Grok | các file `docs/*.md` còn lại — không phải hợp đồng sản phẩm |
 
@@ -52,10 +55,12 @@ flowchart TD
   which -->|web_search| ws[web_search.ts]
   which -->|x_search| xs[x_search.ts]
   which -->|compact xAI| xc[xai-compact.ts]
+  which -->|AgentRouter Vietnamese adapter| ar[agentrouter-language-adapter.ts]
   ws --> spec[plans/active Codex spec neu dung backend]
   spec --> check[node --experimental-strip-types --check]
   xs --> check
   xc --> check
+  ar --> check
   check --> live{Can live?}
   live -->|Khong| done[Bao cao syntax + review]
   live -->|Co va duoc phep| smoke[Smoke tren dung model]
@@ -70,6 +75,8 @@ flowchart LR
   ext --> reload["/reload do nguoi dung"]
   reload --> runtime[Pi load extension]
 ```
+
+Riêng adapter phải load bằng explicit configured path ở vị trí cuối, không copy vào auto-discovery trước các payload hook khác.
 
 Rollback `web_search` toàn cục: chép lại `/root/.pi/agent/extensions/web_search.ts.bak` rồi `/reload`. Rollback `xai-compact` toàn cục: xóa `/root/.pi/agent/extensions/xai-compact.ts` rồi `/reload`.
 
@@ -122,6 +129,28 @@ flowchart TD
 
 Không gọi `POST /v1/responses/compact`. Overflow trên xAI không được `return void`.
 
+## Luồng runtime `agentrouter-language-adapter`
+
+Chỉ nhận `agentrouter` + `openai-completions`; extension phải là `before_provider_request` handler cuối.
+
+```mermaid
+flowchart TD
+  req[before_provider_request] --> gate{agentrouter + Chat Completions?}
+  gate -->|Không| keep[Giữ payload]
+  gate -->|Có| clone[structuredClone payload]
+  clone --> collect[Dịch prose; bảo vệ code/URL/file]
+  collect --> sidecar[direct xai/grok-4.6, không tools/toolChoice]
+  sidecar --> restore[Khôi phục placeholder + scan residual]
+  restore -->|Safe| send[Payload có prose đã transform sang English]
+  collect -->|Technical Vietnamese / lỗi| block[ctx.abort + English sentinel]
+  sidecar -->|Lỗi / malformed / quá giới hạn| block
+  restore -->|Còn Vietnamese| block
+  reply[turn_end AgentRouter có text] --> display[xAI dịch sang tiếng Việt]
+  display --> entry[Append TUI custom entry, không vào LLM context]
+```
+
+Tool output, tool-call argument, raw JSON/code, path hoặc protected span có tiếng Việt được detector nhận ra sẽ bị chặn thay vì sửa dữ liệu kỹ thuật. Sidecar yêu cầu effective URL đúng `https://api.x.ai/v1`. Cache bị chặn theo số entry/ký tự; source transcript giữ nguyên provider-native. TUI entry plain-text được lưu riêng, provider-scoped và không vào LLM context; streaming/non-TUI vẫn thấy source response. Detector heuristic không chứng minh payload tuyệt đối English-only hay classifier live của AgentRouter.
+
 ## Luồng runtime `x_search`
 
 Không phụ thuộc model đang chat.
@@ -143,6 +172,9 @@ flowchart TD
 node --experimental-strip-types --check web_search.ts
 node --experimental-strip-types --check x_search.ts
 node --experimental-strip-types --check xai-compact.ts
+node --experimental-strip-types --check agentrouter-language-adapter.ts
+node --experimental-strip-types --check agentrouter-language-adapter.test.ts
+node --experimental-strip-types --test agentrouter-language-adapter.test.ts
 ```
 
-Syntax pass không chứng minh hosted search, citation, hay compact. Live smoke cần auth ngoài kho và đúng model: Grok + `openai-responses`, hoặc `openai-codex`, hoặc `xai/grok-4.6` cho `x_search`. Compact live cần phiên xAI Responses thật và `/compact` hoặc `/tree` summarize.
+Syntax/test offline không chứng minh hosted search, citation, compact, classifier live AgentRouter, load order thực tế, hay sidecar có auth. Live smoke cần quyền riêng vì có thể phát sinh chi phí; compact live cần phiên xAI Responses thật và `/compact` hoặc `/tree` summarize.
